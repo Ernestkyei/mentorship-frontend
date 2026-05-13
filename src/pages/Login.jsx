@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { signin } from '../services/authService';  // ← Import from auth.service
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,35 +12,39 @@ const Login = () => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      // Check demo credentials
-      if (formData.email && formData.password) {
-        localStorage.setItem('user', JSON.stringify({
-          name: 'Ernest Kyei',
-          email: formData.email,
-          focusArea: 'leadership'
-        }));
-        localStorage.setItem('isAuthenticated', 'true');
-        setIsLoading(false);
-        navigate('/courses');
-      } else {
-        setIsLoading(false);
-        alert('Please enter your credentials');
+    try {
+      // Use the signin function from auth.service.js
+      const result = await signin(formData.email, formData.password);
+      if (result.success) {
+        // Check if user had an intended course
+        const intendedCourse = localStorage.getItem('intendedCourse');
+        if (intendedCourse) {
+          localStorage.removeItem('intendedCourse');
+          navigate(`/course/${intendedCourse}`);
+        } else {
+          navigate('/courses');
+        }
       }
-    }, 1000);
+    } catch (err) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -47,10 +52,55 @@ const Login = () => {
       <Navbar />
       
       <div className="flex min-h-[calc(100vh-64px)]">
-        {/* Left Side - Form Section */}
+        {/* Left Side - Welcome Back Section */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-600 to-indigo-600 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600')] bg-cover bg-center opacity-30" />
+          <div className="relative z-10 flex flex-col justify-center px-12 text-white">
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 text-sm mb-4">
+                <span>✨</span>
+                <span>Welcome Back</span>
+              </div>
+              <h3 className="text-3xl font-bold mb-4">Continue your journey</h3>
+              <p className="text-purple-100 mb-6">
+                Sign in to access your courses, track progress, and connect with your mentor.
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                <span>8 modules completed</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                <span>5 day streak</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                <span>New feedback from your mentor</span>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-white/20">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
+                  alt="User"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <div>
+                  <p className="text-sm font-medium">"Best decision for my career"</p>
+                  <p className="text-xs text-purple-200">— Sarah Johnson</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Form Section */}
         <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-md w-full space-y-8">
-            {/* Header */}
             <div className="text-center">
               <div className="mx-auto h-12 w-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center mb-4">
                 <span className="text-2xl">📚</span>
@@ -61,9 +111,13 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Form */}
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-              {/* Email */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email address
@@ -81,12 +135,11 @@ const Login = () => {
                     value={formData.email}
                     onChange={handleChange}
                     className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                    placeholder="ernest@email.com"
+                    placeholder="ernest@example.com"
                   />
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                   Password
@@ -120,14 +173,12 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Forgot Password */}
               <div className="flex items-center justify-end">
                 <Link to="/forgot-password" className="text-sm text-purple-600 hover:text-purple-500 transition">
                   Forgot password?
                 </Link>
               </div>
 
-              {/* Submit Button */}
               <div>
                 <button
                   type="submit"
@@ -148,7 +199,6 @@ const Login = () => {
                 </button>
               </div>
 
-              {/* Sign Up Link */}
               <div className="text-center">
                 <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
@@ -159,37 +209,10 @@ const Login = () => {
               </div>
             </form>
 
-            {/* Demo Credentials */}
             <div className="mt-6 p-4 bg-gray-100 rounded-lg">
               <p className="text-xs text-gray-600 text-center">
-                🔬 Demo Mode — Use any email/password to test
+                🔬 Demo Credentials: ernest@example.com / password123
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side - Welcome Back Section */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-600 to-indigo-600 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600')] bg-cover bg-center opacity-10" />
-          <div className="relative z-10 flex flex-col justify-center px-12 text-white">
-            <h3 className="text-3xl font-bold mb-4">Welcome back!</h3>
-            <p className="text-purple-100 mb-6">
-              Continue where you left off and keep growing with your personalized mentoring journey.
-            </p>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                <span>8 modules completed</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                <span>5 day streak</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                <span>New feedback from your mentor</span>
-              </div>
             </div>
           </div>
         </div>

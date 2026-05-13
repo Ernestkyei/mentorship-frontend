@@ -268,7 +268,7 @@ const SignUp = () => {
             {/* Demo Notice */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-700 text-center">
-                🔬 Demo Mode: Create an account to start your mentoring journey
+                Create an account to start your mentoring journey
               </p>
             </div>
           </div>

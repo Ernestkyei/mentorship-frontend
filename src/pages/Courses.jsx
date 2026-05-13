@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import { 
   Search, 
@@ -31,6 +32,14 @@ const UsersIcon = ({ className }) => (
 const Courses = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+
+  // Check auth status
+  useEffect(() => {
+    const auth = localStorage.getItem('isAuthenticated') === 'true';
+    setIsAuthenticated(auth);
+  }, []);
 
   const categories = [
     { id: 'all', name: 'All', icon: null },
@@ -299,6 +308,17 @@ const Courses = () => {
     return colors[color] || 'from-purple-600 to-indigo-600';
   };
 
+  const handleCourseAction = (courseId) => {
+    if (!isAuthenticated) {
+      // Save intended course and redirect to signup
+      localStorage.setItem('intendedCourse', courseId);
+      navigate('/signup');
+    } else {
+      // Navigate to course player
+      navigate(`/course/${courseId}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -417,7 +437,7 @@ const Courses = () => {
                   <h3 className="text-xl font-bold mb-2 group-hover:text-purple-600 transition">
                     {course.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {course.description}
                   </p>
 
@@ -441,8 +461,16 @@ const Courses = () => {
                     )}
                   </div>
 
-                  <button className={`w-full py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-gradient-to-r ${getButtonColor(course.color)} text-white hover:shadow-lg`}>
-                    {course.progress ? (
+                  <button
+                    onClick={() => handleCourseAction(course.id)}
+                    className={`w-full py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-gradient-to-r ${getButtonColor(course.color)} text-white hover:shadow-lg`}
+                  >
+                    {!isAuthenticated ? (
+                      <>
+                        Enroll Now
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    ) : course.progress ? (
                       <>
                         <CheckCircle className="w-4 h-4" />
                         Continue
@@ -454,6 +482,13 @@ const Courses = () => {
                       </>
                     )}
                   </button>
+                  
+                  {/* Show login message for non-authenticated users */}
+                  {!isAuthenticated && (
+                    <p className="text-xs text-center text-gray-400 mt-2">
+                      Sign up to track your progress
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
