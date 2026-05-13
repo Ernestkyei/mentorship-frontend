@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
+import { getUserProgress } from '../services/progressService';
+import { coursesData } from '../data/coursesData';
 import {
   BookOpen,
   Clock,
@@ -15,64 +17,178 @@ import {
   Bell,
   FileText,
   UserCheck,
-  Zap
+  Zap,
+  ArrowLeft
 } from 'lucide-react';
 
 const Progress = () => {
-  const [activeProgram, setActiveProgram] = useState('executive');
+  const navigate = useNavigate();
+  const [activeProgram, setActiveProgram] = useState('1');
+  const [userProgress, setUserProgress] = useState(null);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // User progress data
-  const progressData = {
-    modulesCompleted: 8,
-    totalModules: 12,
-    hoursLearned: 14,
-    tasksSubmitted: 6,
-    currentStreak: 5,
-    overallProgress: 25
+  // Helper to get next module name
+  const getNextModuleName = (course, completedModules) => {
+    if (!course?.modules) return 'Start learning';
+    const nextModule = course.modules.find(m => !completedModules.includes(m.id) && m.status !== 'locked');
+    return nextModule?.title || 'Review completed modules';
   };
 
-  // User journey stages
+  // Helper to get milestones with CORRECT status from actual progress
+  const getMilestones = () => {
+    const course = coursesData[activeProgram];
+    if (!course || !course.modules) return [];
+    
+    // Get completed modules from actual user progress
+    const completedModules = userProgress?.courseProgress?.[activeProgram]?.completedModules || [];
+    
+    return course.modules.map((module, idx) => {
+      let status = 'upcoming';
+      
+      if (completedModules.includes(module.id)) {
+        status = 'completed';
+      } else if (idx === 0 || completedModules.includes(course.modules[idx - 1]?.id)) {
+        status = 'current';
+      }
+      
+      return {
+        id: module.id,
+        title: module.title,
+        date: `Module ${idx + 1}`,
+        status: status
+      };
+    });
+  };
+
+  const handleBackToModule = () => {
+    navigate(`/course/${activeProgram}`);
+  };
+
+  // Listen for storage changes (when modules are completed in CoursePlayer)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+      const userId = currentUser.id;
+      if (userId) {
+        const progress = getUserProgress(userId);
+        setUserProgress(progress);
+        setRefreshTrigger(prev => prev + 1);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    // Get current user
+    const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
+    const userId = currentUser.id;
+    
+    if (userId) {
+      // Get progress from localStorage
+      const progress = getUserProgress(userId);
+      setUserProgress(progress);
+      
+      // Get enrolled courses from user data
+      const userData = JSON.parse(localStorage.getItem('current_user') || '{}');
+      const enrolled = userData.enrolledCourses || [1, 4, 7, 10];
+      setEnrolledCourses(enrolled);
+      
+      // Set active program to first enrolled course
+      if (enrolled.length > 0 && activeProgram === '1') {
+        setActiveProgram(enrolled[0].toString());
+      }
+    } else {
+      // Default for demo
+      setUserProgress({
+        modulesCompleted: 0,
+        hoursLearned: 0,
+        tasksSubmitted: 0,
+        currentStreak: 0,
+        courseProgress: {}
+      });
+      setEnrolledCourses([1, 4, 7, 10]);
+    }
+  }, [refreshTrigger]);
+
+  // Build programs list from enrolled courses with REAL progress
+  const programs = enrolledCourses.map(courseId => {
+    const course = coursesData[courseId];
+    const courseProgress = userProgress?.courseProgress?.[courseId];
+    return {
+      id: courseId.toString(),
+      name: course?.title || 'Course',
+      progress: courseProgress?.percentage || 0,
+      completedCount: courseProgress?.completedModules?.length || 0,
+      totalModules: course?.modules?.length || 0,
+      nextModule: getNextModuleName(course, courseProgress?.completedModules || [])
+    };
+  });
+
+  const currentProgram = programs.find(p => p.id === activeProgram) || programs[0];
+
+  // Calculate overall stats from REAL data
+  const totalModulesCompleted = userProgress?.modulesCompleted || 0;
+  const totalHoursLearned = userProgress?.hoursLearned?.toFixed(1) || 0;
+  const totalTasksSubmitted = userProgress?.tasksSubmitted || 0;
+  const currentStreak = userProgress?.currentStreak || 0;
+
+  // Calculate total modules across all enrolled courses
+  const totalModulesAcrossCourses = enrolledCourses.reduce((total, courseId) => {
+    const course = coursesData[courseId];
+    return total + (course?.modules?.length || 0);
+  }, 0);
+
+  // User journey stages (dynamic based on progress)
   const journeyStages = [
     { name: "Sign up", completed: true, icon: UserCheck },
-    { name: "Choose program", completed: true, icon: Target },
-    { name: "Learn modules", completed: true, icon: BookOpen },
-    { name: "Submit tasks", completed: true, icon: FileText },
-    { name: "Get feedback", completed: true, icon: MessageCircle },
-    { name: "Earn certificate", completed: false, icon: Award }
+    { name: "Choose program", completed: enrolledCourses.length > 0, icon: Target },
+    { name: "Learn modules", completed: totalModulesCompleted > 0, icon: BookOpen },
+    { name: "Submit tasks", completed: totalTasksSubmitted > 0, icon: FileText },
+    { name: "Get feedback", completed: totalTasksSubmitted > 2, icon: MessageCircle },
+    { name: "Earn certificate", completed: currentProgram?.progress >= 100, icon: Award }
   ];
 
-  // Milestones data
-  const milestones = [
-    { week: 1, title: "Foundations complete", date: "May 1", status: "completed" },
-    { week: 2, title: "Self-awareness module", date: "May 8", status: "completed" },
-    { week: 3, title: "Strategic thinking", date: "May 15", status: "current" },
-    { week: 4, title: "Communication", date: "May 22", status: "upcoming" },
-    { week: 5, title: "Certificate earned", date: "Jun 12", status: "upcoming" }
-  ];
+  const milestones = getMilestones();
 
-  // Active programs
-  const programs = [
-    { id: "executive", name: "Executive leadership", progress: 25, nextModule: "Strategic thinking" },
-    { id: "career", name: "Career acceleration", progress: 45, nextModule: "Portfolio building" }
-  ];
-
-  // Accountability items
+  // Accountability items with real data
   const accountabilityItems = [
     { type: "reminder", title: "Weekly reminder sent", detail: "Mon 8am — automatic", icon: Bell, color: "blue" },
-    { type: "report", title: "Progress report emailed", detail: "Every Sunday", icon: Mail, color: "green" },
-    { type: "reflection", title: "Reflection journal due", detail: "In 2 days", icon: FileText, color: "orange" },
-    { type: "feedback", title: "Mentor feedback received", detail: "3 hours ago", icon: MessageCircle, color: "purple" }
+    { type: "report", title: "Progress report", detail: `${totalModulesCompleted} modules completed`, icon: Mail, color: "green" },
+    { type: "reflection", title: "Reflection journal", detail: `${totalTasksSubmitted} submissions`, icon: FileText, color: "orange" },
+    { type: "feedback", title: "Mentor feedback", detail: "Available for completed modules", icon: MessageCircle, color: "purple" }
   ];
 
-  const currentProgram = programs.find(p => p.id === activeProgram);
+  if (!userProgress) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading progress...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      {/* Hero Section */}
+      {/* Hero Section with Back Button */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <button
+            onClick={handleBackToModule}
+            className="mb-4 flex items-center gap-2 text-white/80 hover:text-white transition group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
+            <span className="text-sm">Back to Course</span>
+          </button>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">My progress overview</h1>
           <p className="text-purple-100">Track your learning journey and celebrate your achievements</p>
         </div>
@@ -80,21 +196,21 @@ const Progress = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid */}
+        {/* Stats Grid - Now using REAL data */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <BookOpen className="w-8 h-8 text-purple-600" />
-              <span className="text-2xl font-bold text-gray-900">{progressData.modulesCompleted}</span>
+              <span className="text-2xl font-bold text-gray-900">{totalModulesCompleted}</span>
             </div>
             <p className="text-gray-600 text-sm">Modules completed</p>
-            <p className="text-xs text-gray-400">of {progressData.totalModules} total</p>
+            <p className="text-xs text-gray-400">of {totalModulesAcrossCourses} total</p>
           </div>
           
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <Clock className="w-8 h-8 text-blue-600" />
-              <span className="text-2xl font-bold text-gray-900">{progressData.hoursLearned}</span>
+              <span className="text-2xl font-bold text-gray-900">{totalHoursLearned}</span>
             </div>
             <p className="text-gray-600 text-sm">Hours learned</p>
             <p className="text-xs text-gray-400">Total learning time</p>
@@ -103,7 +219,7 @@ const Progress = () => {
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <CheckCircle className="w-8 h-8 text-green-600" />
-              <span className="text-2xl font-bold text-gray-900">{progressData.tasksSubmitted}</span>
+              <span className="text-2xl font-bold text-gray-900">{totalTasksSubmitted}</span>
             </div>
             <p className="text-gray-600 text-sm">Tasks submitted</p>
             <p className="text-xs text-gray-400">Reflections & quizzes</p>
@@ -112,7 +228,7 @@ const Progress = () => {
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
               <Flame className="w-8 h-8 text-orange-500" />
-              <span className="text-2xl font-bold text-gray-900">{progressData.currentStreak}</span>
+              <span className="text-2xl font-bold text-gray-900">{currentStreak}</span>
             </div>
             <p className="text-gray-600 text-sm">Current streak</p>
             <p className="text-xs text-gray-400">days in a row</p>
@@ -154,33 +270,34 @@ const Progress = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm opacity-80">Active program</p>
-                  <h3 className="text-xl font-bold">{currentProgram.name}</h3>
+                  <h3 className="text-xl font-bold">{currentProgram?.name || 'Select a course'}</h3>
                 </div>
                 <Award className="w-10 h-10 opacity-80" />
               </div>
               <div className="mb-3">
                 <div className="flex justify-between text-sm mb-1">
                   <span>Overall progress</span>
-                  <span>{currentProgram.progress}%</span>
+                  <span>{currentProgram?.progress || 0}%</span>
                 </div>
                 <div className="w-full h-2 bg-white/30 rounded-full">
                   <div 
                     className="h-full bg-white rounded-full transition-all"
-                    style={{ width: `${currentProgram.progress}%` }}
+                    style={{ width: `${currentProgram?.progress || 0}%` }}
                   />
                 </div>
               </div>
-              <p className="text-sm opacity-80">Next: {currentProgram.nextModule}</p>
+              <p className="text-sm opacity-80">
+                {currentProgram?.completedCount || 0} of {currentProgram?.totalModules || 0} modules completed
+              </p>
             </div>
 
-            {/* Milestones Timeline */}
+            {/* Milestones Timeline - Now shows REAL completion status */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-purple-600" />
                 Milestones
               </h2>
               <div className="relative">
-                {/* Timeline line */}
                 <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                 
                 <div className="space-y-6">
@@ -199,7 +316,7 @@ const Progress = () => {
                               milestone.status === 'current' ? 'text-purple-600' :
                               'text-gray-500'
                             }`}>
-                              Week {milestone.week} — {milestone.title}
+                              {milestone.title}
                             </p>
                             <p className="text-sm text-gray-400">{milestone.date}</p>
                           </div>
@@ -273,6 +390,9 @@ const Progress = () => {
                         style={{ width: `${program.progress}%` }}
                       />
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {program.completedCount} of {program.totalModules} modules
+                    </p>
                   </button>
                 ))}
               </div>
@@ -282,10 +402,12 @@ const Progress = () => {
             <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
               <h3 className="font-semibold text-gray-900 mb-3">Quick actions</h3>
               <div className="space-y-2">
-                <button className="w-full py-2 bg-white rounded-lg text-purple-600 font-medium text-sm hover:shadow-md transition flex items-center justify-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Continue learning
-                </button>
+                <Link to="/courses">
+                  <button className="w-full py-2 bg-white rounded-lg text-purple-600 font-medium text-sm hover:shadow-md transition flex items-center justify-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Continue learning
+                  </button>
+                </Link>
                 <button className="w-full py-2 bg-white rounded-lg text-gray-700 font-medium text-sm hover:shadow-md transition flex items-center justify-center gap-2">
                   <Bell className="w-4 h-4" />
                   Adjust nudge settings

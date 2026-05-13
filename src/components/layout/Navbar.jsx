@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Menu, X, UserPlus, LogOut } from 'lucide-react';
 
 const Navbar = () => {
@@ -12,17 +13,9 @@ const Navbar = () => {
   useEffect(() => {
     const checkAuth = () => {
       const auth = localStorage.getItem('isAuthenticated') === 'true';
-      const userData = localStorage.getItem('current_user');
-      
-      console.log('Auth status:', auth);
-      console.log('User data from localStorage:', userData);
-      
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        console.log('Parsed user:', parsedUser);
-        setUser(parsedUser);
-      }
+      const userData = JSON.parse(localStorage.getItem('current_user') || '{}');
       setIsAuthenticated(auth);
+      setUser(userData);
     };
     
     checkAuth();
@@ -37,10 +30,6 @@ const Navbar = () => {
     if (user?.name && user.name.length > 0) {
       return user.name.charAt(0).toUpperCase();
     }
-    // Fallback: check if user object has name property
-    if (user && user.name) {
-      return user.name.charAt(0).toUpperCase();
-    }
     return '?';
   };
 
@@ -53,13 +42,23 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('current_user');
-    localStorage.removeItem('auth_token');
-    setIsAuthenticated(false);
-    setUser(null);
-    navigate('/');
-    setIsOpen(false);
+    const userName = user?.name?.split(' ')[0] || 'User';
+    
+    // Show success toast before clearing localStorage
+    toast.success(`Goodbye, ${userName}! 👋 See you soon.`, {
+      duration: 3000,
+    });
+    
+    // Small delay to show toast before redirect
+    setTimeout(() => {
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('current_user');
+      localStorage.removeItem('auth_token');
+      setIsAuthenticated(false);
+      setUser(null);
+      navigate('/');
+      setIsOpen(false);
+    }, 500);
   };
 
   const handleSignUp = () => {

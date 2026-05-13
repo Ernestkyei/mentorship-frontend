@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import { 
   Search, 
@@ -19,10 +20,11 @@ import {
   Rocket, 
   Heart, 
   Sparkles,
-  MessageCircle
+  MessageCircle,
+  User
 } from 'lucide-react';
 
-// Users icon component (since Users from lucide is different)
+// Users icon component
 const UsersIcon = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -52,7 +54,7 @@ const Courses = () => {
   ];
 
   const courses = [
-    // Leadership Category
+    // Leadership Category - Mentor: Dr. Sarah Collins
     {
       id: 1,
       title: "Executive leadership program",
@@ -69,7 +71,12 @@ const Courses = () => {
       isPopular: true,
       certificate: true,
       color: "purple",
-      icon: Shield
+      mentor: {
+        name: "Dr. Sarah Collins",
+        title: "Executive Coach",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+        bio: "15+ years coaching C-suite executives"
+      }
     },
     {
       id: 2,
@@ -87,7 +94,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "purple",
-      icon: UsersIcon
+      mentor: {
+        name: "Dr. Sarah Collins",
+        title: "Executive Coach",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+        bio: "15+ years coaching C-suite executives"
+      }
     },
     {
       id: 3,
@@ -105,10 +117,15 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "purple",
-      icon: Target
+      mentor: {
+        name: "Dr. Sarah Collins",
+        title: "Executive Coach",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+        bio: "15+ years coaching C-suite executives"
+      }
     },
 
-    // Career Category
+    // Career Category - Mentor: Michael Chen
     {
       id: 4,
       title: "Career acceleration",
@@ -125,7 +142,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "blue",
-      icon: Rocket
+      mentor: {
+        name: "Michael Chen",
+        title: "Career Coach",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+        bio: "Former Google recruiter, 10+ years in career development"
+      }
     },
     {
       id: 5,
@@ -143,7 +165,12 @@ const Courses = () => {
       isPopular: true,
       certificate: true,
       color: "blue",
-      icon: Star
+      mentor: {
+        name: "Michael Chen",
+        title: "Career Coach",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+        bio: "Former Google recruiter, 10+ years in career development"
+      }
     },
     {
       id: 6,
@@ -161,10 +188,15 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "blue",
-      icon: Target
+      mentor: {
+        name: "Michael Chen",
+        title: "Career Coach",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+        bio: "Former Google recruiter, 10+ years in career development"
+      }
     },
 
-    // Mindset Category
+    // Mindset Category - Mentor: Dr. Emily Watson
     {
       id: 7,
       title: "Growth mindset coaching",
@@ -181,7 +213,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "green",
-      icon: Brain
+      mentor: {
+        name: "Dr. Emily Watson",
+        title: "Mindset Coach",
+        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+        bio: "Clinical psychologist specializing in growth mindset"
+      }
     },
     {
       id: 8,
@@ -199,7 +236,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "green",
-      icon: Heart
+      mentor: {
+        name: "Dr. Emily Watson",
+        title: "Mindset Coach",
+        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+        bio: "Clinical psychologist specializing in growth mindset"
+      }
     },
     {
       id: 9,
@@ -217,10 +259,15 @@ const Courses = () => {
       isPopular: true,
       certificate: true,
       color: "green",
-      icon: Sparkles
+      mentor: {
+        name: "Dr. Emily Watson",
+        title: "Mindset Coach",
+        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+        bio: "Clinical psychologist specializing in growth mindset"
+      }
     },
 
-    // Productivity Category
+    // Productivity Category - Mentor: James Wilson
     {
       id: 10,
       title: "High-performance habits",
@@ -237,7 +284,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "orange",
-      icon: Zap
+      mentor: {
+        name: "James Wilson",
+        title: "Productivity Coach",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+        bio: "Author of 'Peak Performance Daily'"
+      }
     },
     {
       id: 11,
@@ -255,10 +307,15 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "orange",
-      icon: Clock
+      mentor: {
+        name: "James Wilson",
+        title: "Productivity Coach",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150",
+        bio: "Author of 'Peak Performance Daily'"
+      }
     },
 
-    // Communication Category
+    // Communication Category - Mentor: Lisa Rodriguez
     {
       id: 12,
       title: "Communication & influence",
@@ -275,7 +332,12 @@ const Courses = () => {
       isPopular: false,
       certificate: true,
       color: "pink",
-      icon: MessageCircle
+      mentor: {
+        name: "Lisa Rodriguez",
+        title: "Communication Coach",
+        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
+        bio: "Former TEDx speaker coach"
+      }
     }
   ];
 
@@ -308,14 +370,15 @@ const Courses = () => {
     return colors[color] || 'from-purple-600 to-indigo-600';
   };
 
-  const handleCourseAction = (courseId) => {
+  const handleCourseAction = (courseId, courseTitle) => {
     if (!isAuthenticated) {
-      // Save intended course and redirect to signup
       localStorage.setItem('intendedCourse', courseId);
       navigate('/signup');
     } else {
-      // Navigate to course player
-      navigate(`/course/${courseId}`);
+      toast.success(`Opening: ${courseTitle} 🚀`, { duration: 2000 });
+      setTimeout(() => {
+        navigate(`/course/${courseId}`);
+      }, 500);
     }
   };
 
@@ -323,7 +386,6 @@ const Courses = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      {/* Hero Section */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">All programs</h1>
@@ -334,7 +396,6 @@ const Courses = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Search and Filter Bar */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-8 sticky top-16 z-40">
@@ -369,7 +430,6 @@ const Courses = () => {
           </div>
         </div>
 
-        {/* Results Count */}
         <div className="mb-6 flex justify-between items-center">
           <p className="text-gray-600">
             Showing <span className="font-semibold text-gray-900">{filteredCourses.length}</span> of {courses.length} programs
@@ -380,7 +440,6 @@ const Courses = () => {
           </div>
         </div>
 
-        {/* Courses Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {filteredCourses.map((course) => (
             <div key={course.id} className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
@@ -437,9 +496,24 @@ const Courses = () => {
                   <h3 className="text-xl font-bold mb-2 group-hover:text-purple-600 transition">
                     {course.title}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                     {course.description}
                   </p>
+
+                  {/* Mentor Info */}
+                  <div className="flex items-center gap-2 mb-4 p-2 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center overflow-hidden">
+                      {course.mentor.avatar ? (
+                        <img src={course.mentor.avatar} alt={course.mentor.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-purple-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">{course.mentor.name}</p>
+                      <p className="text-xs text-gray-500">{course.mentor.title}</p>
+                    </div>
+                  </div>
 
                   <div className="flex items-center gap-4 mb-4 flex-wrap">
                     <div className="flex items-center gap-1">
@@ -462,7 +536,7 @@ const Courses = () => {
                   </div>
 
                   <button
-                    onClick={() => handleCourseAction(course.id)}
+                    onClick={() => handleCourseAction(course.id, course.title)}
                     className={`w-full py-2 rounded-lg font-medium transition flex items-center justify-center gap-2 bg-gradient-to-r ${getButtonColor(course.color)} text-white hover:shadow-lg`}
                   >
                     {!isAuthenticated ? (
@@ -483,7 +557,6 @@ const Courses = () => {
                     )}
                   </button>
                   
-                  {/* Show login message for non-authenticated users */}
                   {!isAuthenticated && (
                     <p className="text-xs text-center text-gray-400 mt-2">
                       Sign up to track your progress
@@ -495,7 +568,6 @@ const Courses = () => {
           ))}
         </div>
 
-        {/* Empty State */}
         {filteredCourses.length === 0 && (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🔍</div>

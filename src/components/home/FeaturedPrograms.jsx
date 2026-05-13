@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const programs = [
   {
@@ -28,6 +29,16 @@ const programs = [
 ];
 
 const FeaturedPrograms = () => {
+  const navigate = useNavigate();
+
+  const handleEnroll = (programId, programTitle) => {
+    // Save which course user wanted to enroll in
+    localStorage.setItem('intendedCourse', programId);
+    localStorage.setItem('intendedCourseTitle', programTitle);
+    // Redirect to signup page
+    navigate('/signup');
+  };
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-6xl mx-auto px-5">
@@ -46,7 +57,10 @@ const FeaturedPrograms = () => {
                 <span>📚 {program.modules} modules</span>
                 <span>⏱️ {program.duration}</span>
               </div>
-              <button className="w-full bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700 transition">
+              <button 
+                onClick={() => handleEnroll(program.id, program.title)}
+                className="w-full bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700 transition"
+              >
                 Enroll →
               </button>
             </div>

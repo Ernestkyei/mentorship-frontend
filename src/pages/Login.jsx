@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { signin } from '../services/authService';  // ← Import from auth.service
+import { signin } from '../services/authService';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,9 +29,14 @@ const Login = () => {
     setError('');
     
     try {
-      // Use the signin function from auth.service.js
       const result = await signin(formData.email, formData.password);
       if (result.success) {
+        // Show success toast
+        toast.success(`Welcome back, ${result.user.name}! 🎉`, {
+          duration: 3000,
+          position: 'top-right',
+        });
+        
         // Check if user had an intended course
         const intendedCourse = localStorage.getItem('intendedCourse');
         if (intendedCourse) {
@@ -41,7 +47,12 @@ const Login = () => {
         }
       }
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      const errorMsg = err.message || 'Invalid email or password';
+      setError(errorMsg);
+      toast.error(errorMsg, {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setIsLoading(false);
     }

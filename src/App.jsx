@@ -13,12 +13,15 @@ function App() {
   return (
     <Router>
       <Toaster 
-        position="top-right"
+        position="top-center"
         toastOptions={{
           duration: 3000,
           style: {
             background: '#363636',
             color: '#fff',
+            borderRadius: '12px',
+            padding: '12px 20px',
+            fontSize: '14px',
           },
           success: {
             duration: 3000,

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, Shield, TrendingUp, Brain, Zap } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { signup } from '../services/authService';
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -9,42 +10,37 @@ const SignUp = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    password: '',
-    focusArea: 'leadership'
+    password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-
-  const focusAreas = [
-    { id: 'leadership', name: 'Leadership development', icon: Shield, color: 'purple' },
-    { id: 'career', name: 'Career growth', icon: TrendingUp, color: 'blue' },
-    { id: 'mindset', name: 'Growth mindset', icon: Brain, color: 'green' },
-    { id: 'productivity', name: 'Productivity & habits', icon: Zap, color: 'orange' }
-  ];
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      // Store user data in localStorage for demo
-      localStorage.setItem('user', JSON.stringify({
-        name: formData.fullName,
-        email: formData.email,
-        focusArea: formData.focusArea
-      }));
-      localStorage.setItem('isAuthenticated', 'true');
-      
+    try {
+      const result = await signup(formData);
+      if (result.success) {
+        alert(`🎉 Welcome, ${result.user.name}! Your account has been created.`);
+        navigate('/courses');
+      }
+    } catch (err) {
+      const errorMsg = err.message || 'Something went wrong. Please try again.';
+      setError(errorMsg);
+      alert(`❌ ${errorMsg}`);
+    } finally {
       setIsLoading(false);
-      navigate('/courses');
-    }, 1000);
+    }
   };
 
   return (
@@ -121,6 +117,12 @@ const SignUp = () => {
 
             {/* Form */}
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
               {/* Full Name */}
               <div>
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -203,36 +205,6 @@ const SignUp = () => {
                 </p>
               </div>
 
-              {/* Focus Area Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  I want to focus on
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {focusAreas.map((area) => (
-                    <button
-                      key={area.id}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, focusArea: area.id })}
-                      className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
-                        formData.focusArea === area.id
-                          ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-500'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <area.icon className={`h-5 w-5 ${
-                        formData.focusArea === area.id ? 'text-purple-600' : 'text-gray-400'
-                      }`} />
-                      <span className={`text-sm font-medium ${
-                        formData.focusArea === area.id ? 'text-purple-700' : 'text-gray-700'
-                      }`}>
-                        {area.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Submit Button */}
               <div>
                 <button
@@ -268,7 +240,7 @@ const SignUp = () => {
             {/* Demo Notice */}
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-xs text-blue-700 text-center">
-                Create an account to start your mentoring journey
+                🔬 Create an account to start your mentoring journey
               </p>
             </div>
           </div>
