@@ -23,24 +23,23 @@ import {
 
 const Progress = () => {
   const navigate = useNavigate();
-  const [activeProgram, setActiveProgram] = useState('1');
+  const [activeProgram, setActiveProgram] = useState(null);
   const [userProgress, setUserProgress] = useState(null);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [debugInfo, setDebugInfo] = useState('');
 
-  // Helper to get next module name
   const getNextModuleName = (course, completedModules) => {
     if (!course?.modules) return 'Start learning';
     const nextModule = course.modules.find(m => !completedModules.includes(m.id) && m.status !== 'locked');
     return nextModule?.title || 'Review completed modules';
   };
 
-  // Helper to get milestones with CORRECT status from actual progress
   const getMilestones = () => {
+    if (!activeProgram) return [];
     const course = coursesData[activeProgram];
     if (!course || !course.modules) return [];
     
-    // Get completed modules from actual user progress
     const completedModules = userProgress?.courseProgress?.[activeProgram]?.completedModules || [];
     
     return course.modules.map((module, idx) => {
@@ -62,10 +61,15 @@ const Progress = () => {
   };
 
   const handleBackToModule = () => {
-    navigate(`/course/${activeProgram}`);
+    if (activeProgram) {
+      navigate(`/course/${activeProgram}`);
+    } else if (enrolledCourses.length > 0) {
+      navigate(`/course/${enrolledCourses[0]}`);
+    } else {
+      navigate('/courses');
+    }
   };
 
-  // Listen for storage changes (when modules are completed in CoursePlayer)
   useEffect(() => {
     const handleStorageChange = () => {
       const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
@@ -82,26 +86,61 @@ const Progress = () => {
   }, []);
 
   useEffect(() => {
-    // Get current user
     const currentUser = JSON.parse(localStorage.getItem('current_user') || '{}');
     const userId = currentUser.id;
     
+    console.log('=== PROGRESS PAGE DEBUG ===');
+    console.log('Current user:', currentUser);
+    console.log('User ID:', userId);
+    
     if (userId) {
-      // Get progress from localStorage
       const progress = getUserProgress(userId);
+      console.log('Raw progress data:', progress);
+      
       setUserProgress(progress);
       
-      // Get enrolled courses from user data
+      // Get ALL courses that have progress OR are in enrolledCourses
+      const progressKeys = Object.keys(progress?.courseProgress || {}).map(id => parseInt(id));
       const userData = JSON.parse(localStorage.getItem('current_user') || '{}');
-      const enrolled = userData.enrolledCourses || [1, 4, 7, 10];
-      setEnrolledCourses(enrolled);
+      const enrolledFromUser = userData.enrolledCourses || [];
       
-      // Set active program to first enrolled course
-      if (enrolled.length > 0 && activeProgram === '1') {
-        setActiveProgram(enrolled[0].toString());
+      // Combine both sources and remove duplicates
+      let allCourses = [...new Set([...progressKeys, ...enrolledFromUser])];
+      
+      if (allCourses.length === 0) {
+        allCourses = [1, 4, 7, 10];
+        setDebugInfo(`No courses found, showing default: ${allCourses.join(', ')}`);
+      } else {
+        setDebugInfo(`Courses: ${allCourses.join(', ')}`);
+      }
+      
+      setEnrolledCourses(allCourses);
+      
+      // Find the course that actually has progress
+      let courseWithProgress = null;
+      let highestProgress = 0;
+      
+      for (const courseId of allCourses) {
+        const courseProgress = progress?.courseProgress?.[courseId];
+        if (courseProgress && courseProgress.completedModules?.length > 0) {
+          const percent = courseProgress.percentage || 0;
+          if (percent > highestProgress) {
+            highestProgress = percent;
+            courseWithProgress = courseId;
+          }
+        }
+      }
+      
+      if (courseWithProgress) {
+        setActiveProgram(courseWithProgress.toString());
+        console.log('✅ Active program set to course with progress:', courseWithProgress);
+        setDebugInfo(prev => `${prev} → Active: Course ${courseWithProgress} (${highestProgress}%)`);
+      } else if (allCourses.length > 0) {
+        setActiveProgram(allCourses[0].toString());
+        console.log('⚠️ No progress found, showing first course:', allCourses[0]);
+        setDebugInfo(prev => `${prev} → Active: Course ${allCourses[0]} (no progress yet)`);
       }
     } else {
-      // Default for demo
       setUserProgress({
         modulesCompleted: 0,
         hoursLearned: 0,
@@ -110,38 +149,58 @@ const Progress = () => {
         courseProgress: {}
       });
       setEnrolledCourses([1, 4, 7, 10]);
+      setActiveProgram('1');
+      setDebugInfo('No user logged in, showing demo data');
     }
   }, [refreshTrigger]);
 
-  // Build programs list from enrolled courses with REAL progress
+  // Build programs list from ALL available courses
   const programs = enrolledCourses.map(courseId => {
     const course = coursesData[courseId];
     const courseProgress = userProgress?.courseProgress?.[courseId];
+    const completedCount = courseProgress?.completedModules?.length || 0;
+    const totalModules = course?.modules?.length || 0;
+    const percentage = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+    
     return {
       id: courseId.toString(),
-      name: course?.title || 'Course',
-      progress: courseProgress?.percentage || 0,
-      completedCount: courseProgress?.completedModules?.length || 0,
-      totalModules: course?.modules?.length || 0,
+      name: course?.title || `Course ${courseId}`,
+      progress: percentage,
+      completedCount: completedCount,
+      totalModules: totalModules,
       nextModule: getNextModuleName(course, courseProgress?.completedModules || [])
     };
   });
 
-  const currentProgram = programs.find(p => p.id === activeProgram) || programs[0];
+  // ✅ Find the active course - either one with progress or first enrolled
+  let activeCourse = null;
+  
+  // First, try to find course with progress
+  for (const course of programs) {
+    if (course.progress > 0 || course.completedCount > 0) {
+      activeCourse = course;
+      break;
+    }
+  }
+  
+  // If no course has progress, use the first enrolled course
+  if (!activeCourse && programs.length > 0) {
+    activeCourse = programs[0];
+  }
+  
+  const currentProgram = activeCourse || { name: 'No courses enrolled', progress: 0, completedCount: 0, totalModules: 0 };
 
-  // Calculate overall stats from REAL data
   const totalModulesCompleted = userProgress?.modulesCompleted || 0;
   const totalHoursLearned = userProgress?.hoursLearned?.toFixed(1) || 0;
   const totalTasksSubmitted = userProgress?.tasksSubmitted || 0;
   const currentStreak = userProgress?.currentStreak || 0;
 
-  // Calculate total modules across all enrolled courses
+  // Calculate total modules across all courses
   const totalModulesAcrossCourses = enrolledCourses.reduce((total, courseId) => {
     const course = coursesData[courseId];
     return total + (course?.modules?.length || 0);
   }, 0);
 
-  // User journey stages (dynamic based on progress)
   const journeyStages = [
     { name: "Sign up", completed: true, icon: UserCheck },
     { name: "Choose program", completed: enrolledCourses.length > 0, icon: Target },
@@ -153,7 +212,6 @@ const Progress = () => {
 
   const milestones = getMilestones();
 
-  // Accountability items with real data
   const accountabilityItems = [
     { type: "reminder", title: "Weekly reminder sent", detail: "Mon 8am — automatic", icon: Bell, color: "blue" },
     { type: "report", title: "Progress report", detail: `${totalModulesCompleted} modules completed`, icon: Mail, color: "green" },
@@ -179,7 +237,6 @@ const Progress = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      {/* Hero Section with Back Button */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <button
@@ -191,12 +248,12 @@ const Progress = () => {
           </button>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">My progress overview</h1>
           <p className="text-purple-100">Track your learning journey and celebrate your achievements</p>
+          <p className="text-xs text-purple-200 mt-2 opacity-70">Debug: {debugInfo}</p>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid - Now using REAL data */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-2">
@@ -236,7 +293,6 @@ const Progress = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - User Journey & Milestones */}
           <div className="lg:col-span-2 space-y-6">
             {/* User Journey Timeline */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -265,7 +321,7 @@ const Progress = () => {
               </div>
             </div>
 
-            {/* Active Program Card */}
+            {/* Active Program Card - NOW SHOWS ACTUAL COURSE NAME */}
             <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -291,7 +347,7 @@ const Progress = () => {
               </p>
             </div>
 
-            {/* Milestones Timeline - Now shows REAL completion status */}
+            {/* Milestones Timeline */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-purple-600" />
@@ -335,7 +391,7 @@ const Progress = () => {
             </div>
           </div>
 
-          {/* Right Column - Accountability & Engagement */}
+          {/* Right Column */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -373,7 +429,10 @@ const Progress = () => {
                 {programs.map(program => (
                   <button
                     key={program.id}
-                    onClick={() => setActiveProgram(program.id)}
+                    onClick={() => {
+                      setActiveProgram(program.id);
+                      setDebugInfo(prev => `${prev} → Switched to: ${program.name}`);
+                    }}
                     className={`w-full p-3 rounded-lg text-left transition ${
                       activeProgram === program.id
                         ? 'bg-purple-50 border border-purple-200'
@@ -398,7 +457,6 @@ const Progress = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
               <h3 className="font-semibold text-gray-900 mb-3">Quick actions</h3>
               <div className="space-y-2">
