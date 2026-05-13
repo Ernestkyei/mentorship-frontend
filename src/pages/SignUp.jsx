@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { signup } from '../services/authService';
@@ -31,13 +32,17 @@ const SignUp = () => {
     try {
       const result = await signup(formData);
       if (result.success) {
-        alert(`🎉 Welcome, ${result.user.name}! Your account has been created.`);
+        toast.success(`🎉 Welcome, ${result.user.name}! Your account has been created.`, {
+          duration: 4000,
+        });
         navigate('/courses');
       }
     } catch (err) {
       const errorMsg = err.message || 'Something went wrong. Please try again.';
       setError(errorMsg);
-      alert(`❌ ${errorMsg}`);
+      toast.error(`❌ ${errorMsg}`, {
+        duration: 4000,
+      });
     } finally {
       setIsLoading(false);
     }
