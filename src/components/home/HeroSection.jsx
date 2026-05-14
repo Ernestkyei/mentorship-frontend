@@ -1,7 +1,18 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Play } from 'lucide-react';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    navigate('/signup');
+  };
+
+  const handleBrowseCourses = () => {
+    navigate('/courses');
+  };
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600">
       {/* Background pattern */}
@@ -19,11 +30,17 @@ const HeroSection = () => {
           No live sessions required. Just guided growth whenever you are ready.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2">
+          <button 
+            onClick={handleGetStarted}
+            className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2"
+          >
             Get started free
             <ArrowRight className="w-4 h-4" />
           </button>
-          <button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition flex items-center justify-center gap-2">
+          <button 
+            onClick={handleBrowseCourses}
+            className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition flex items-center justify-center gap-2"
+          >
             <Play className="w-4 h-4" />
             Browse courses
           </button>
