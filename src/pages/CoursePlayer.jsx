@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import { 
   Play, 
@@ -98,6 +99,11 @@ const CoursePlayer = () => {
     if (nextModule) {
       setSelectedModule(nextModule);
     }
+    
+    // Show toast for module completion
+    toast.success(`🎉 Module "${selectedModule.title}" completed!`, {
+      duration: 3000,
+    });
   };
 
   const handleSubmitReflection = () => {
@@ -106,8 +112,17 @@ const CoursePlayer = () => {
       setTaskSubmitted(true);
       setShowQuiz(true);
       
-      // Show success message
-      alert('✅ Reflection submitted successfully!');
+      // Show toast for reflection submission
+      toast.success('📝 Reflection submitted successfully! Your mentor will review it.', {
+        duration: 4000,
+      });
+      
+      // Clear the textarea
+      setReflectionText('');
+    } else {
+      toast.error('Please write something before submitting.', {
+        duration: 3000,
+      });
     }
   };
 
